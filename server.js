@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const port = process.env.PORT || 3000;
 const Users = require("./user");
 const Tasks = require("./task");
+const bodyParser = require("body-parser");
 
 mongoose
   .connect(
@@ -17,15 +18,17 @@ mongoose
   });
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
-app.use(express.json());
+// app.use(express.json());
 
 app.post("/api/users", async (req, res) => {
   try {
     const Upeople = new Users(req.body);
     const Speople = await Upeople.save();
     res.send(Speople);
-    console.log(res.body);
+    console.log(Speople);
   } catch (error) {
     console.log(error);
   }
@@ -42,6 +45,8 @@ app.get("/api/users", (req, res) => {
   Users.find(eval("(" + req.query.where + ")"))
     .select(eval("(" + req.query.select + ")"))
     .sort(eval("(" + req.query.sort + " )"))
+    // .skip(eval("(" + req.query.skip + " )"))
+    // .limit(eval("(" + req.query.limit + " )"))
     // .sort(eval(req.query.sort))
     // .populate('tasks')
     .exec((error, data) => {
@@ -52,7 +57,7 @@ app.get("/api/users", (req, res) => {
       }
     });
 });
-app.get("/api/user/:id", async (req, res) => {
+app.get("/api/users/:id", async (req, res) => {
   try {
     const data = await Users.findById(req.params.id);
     res.json(data);
@@ -61,22 +66,24 @@ app.get("/api/user/:id", async (req, res) => {
   }
 });
 
-app.put("/api/user/:id", async (req, res) => {
+app.put("/api/users/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const updatedData = req.body.pendingTasks;
     const options = { new: true };
     const findUserData = await Users.findById(id);
-    const availpending = findUserData.pendingTasks.filter((task_id) => {
-      return task_id == updatedData;
-    });
-    console.log(availpending.length);
-    if (availpending.length > 0) {
+    const availablePendingTasks = findUserData.pendingTasks.filter(
+      (task_id) => {
+        return task_id == updatedData;
+      }
+    );
+
+    console.log(availablePendingTasks.length);
+    if (availablePendingTasks.length > 0) {
       res.send("The task is already assigned to this user");
     } else {
       const result = await Users.findByIdAndUpdate(
         id,
-
         { $push: { pendingTasks: updatedData } },
         options
       );
@@ -85,16 +92,17 @@ app.put("/api/user/:id", async (req, res) => {
         // const updatedData = req.body.assignedUser;
         // const options = { new: true };
         const findTask = await Tasks.findById(pendingTaskId);
-        if (findTask.complete === true) {
+        if (findTask.completed === true) {
           const updatedTask = await Tasks.findByIdAndUpdate(
             pendingTaskId,
 
             { $set: { assignedUser: id, completed: false } },
             options
           );
+          res.json(updatedTask);
           console.log(updatedTask);
-        } else if (!findTask.complete) {
-          res.send("This task is already assigned to another.");
+        } else if (!findTask.completed) {
+          res.json("This task is already assigned to another.");
         }
 
         // res.send(taskresult);
@@ -109,11 +117,11 @@ app.put("/api/user/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/user/:id", async (req, res) => {
+app.delete("/api/users/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const data = await Users.findByIdAndDelete(id);
-    res.send(`Document with ${data.title} has been deleted..`);
+    res.json(`Document with ${data.title} has been deleted..`);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -123,7 +131,7 @@ app.post("/api/tasks", async (req, res) => {
   try {
     const UTask = new Tasks(req.body);
     const STask = await UTask.save();
-    res.send(STask);
+    res.json(STask);
     console.log(res.body);
   } catch (error) {
     console.log(error);
@@ -131,15 +139,27 @@ app.post("/api/tasks", async (req, res) => {
 });
 
 app.get("/api/tasks", async (req, res) => {
-  try {
-    const data = await Tasks.find();
-    res.json(data);
-  } catch (error) {
-    console.log("error");
-  }
+  // try {
+  //   const data = await Tasks.find();
+  //   res.json(data);
+  // } catch (error) {
+  //   console.log("error");
+  // }
+  Tasks.find(eval("(" + req.query.where + ")"))
+    .skip(eval("(" + req.query.skip + " )"))
+    .limit(eval("(" + req.query.limit + " )"))
+    // .select(eval("(" + req.query.select + ")"))
+    // .sort(eval("(" + req.query.sort + " )"))
+    .exec((error, data) => {
+      if (error) {
+        res.send(error);
+      } else {
+        res.json({ message: "success", data });
+      }
+    });
 });
 
-app.get("/api/task/:id", async (req, res) => {
+app.get("/api/tasks/:id", async (req, res) => {
   try {
     const data = await Tasks.findById(req.params.id);
     res.json(data);
@@ -148,7 +168,7 @@ app.get("/api/task/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/task/:id", async (req, res) => {
+app.delete("/api/tasks/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const data = await Tasks.findByIdAndDelete(id);

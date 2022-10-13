@@ -1,8 +1,14 @@
 const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema({
-  name: String,
-  email: String,
+  name: {
+    type: String,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+  },
   pendingTasks: [
     {
       type: mongoose.Schema.Types.ObjectId,
