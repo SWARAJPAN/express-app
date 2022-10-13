@@ -20,7 +20,7 @@ app.use(express.json());
 
 app.use(express.json());
 
-app.post("/users", async (req, res) => {
+app.post("/api/users", async (req, res) => {
   try {
     const Upeople = new Users(req.body);
     const Speople = await Upeople.save();
@@ -31,70 +31,95 @@ app.post("/users", async (req, res) => {
   }
 });
 
-app.get("/users", async (req, res) => {
-  try {
-    const data = await Users.find();
-    res.json(data);
-  } catch (error) {
-    console.log("error");
-  }
+app.get("/api/users", (req, res) => {
+  // try {
+  //   const data = await Users.find();
+  //   res.json(data);
+  // } catch (error) {
+  //   console.log("error");
+  // }
+
+  Users.find(eval("(" + req.query.where + ")"))
+    .select(eval("(" + req.query.select + ")"))
+    .sort(eval("(" + req.query.sort + " )"))
+    // .sort(eval(req.query.sort))
+    // .populate('tasks')
+    .exec((error, data) => {
+      if (error) {
+        res.send(error);
+      } else {
+        res.json({ message: "success", data });
+      }
+    });
 });
-app.get("/user/:id", async (req, res) => {
+app.get("/api/user/:id", async (req, res) => {
   try {
     const data = await Users.findById(req.params.id);
     res.json(data);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "error.message" });
   }
 });
 
-app.put("/user/:id", async (req, res) => {
+app.put("/api/user/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const updatedData = req.body.pendingTasks;
     const options = { new: true };
+    const findUserData = await Users.findById(id);
+    const availpending = findUserData.pendingTasks.filter((task_id) => {
+      return task_id == updatedData;
+    });
+    console.log(availpending.length);
+    if (availpending.length > 0) {
+      res.send("The task is already assigned to this user");
+    } else {
+      const result = await Users.findByIdAndUpdate(
+        id,
 
-    const result = await Users.findByIdAndUpdate(
-      id,
+        { $push: { pendingTasks: updatedData } },
+        options
+      );
+      try {
+        const pendingTaskId = req.body.pendingTasks;
+        // const updatedData = req.body.assignedUser;
+        // const options = { new: true };
+        const findTask = await Tasks.findById(pendingTaskId);
+        if (findTask.complete === true) {
+          const updatedTask = await Tasks.findByIdAndUpdate(
+            pendingTaskId,
 
-      { $push: { pendingTasks: updatedData } },
-      options
-    );
+            { $set: { assignedUser: id, completed: false } },
+            options
+          );
+          console.log(updatedTask);
+        } else if (!findTask.complete) {
+          res.send("This task is already assigned to another.");
+        }
 
-    res.send(result);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
+        // res.send(taskresult);
+      } catch (error) {
+        // res.status(400).send("already ass");
+      }
+    }
 
-  try {
-    const id = req.params.id;
-    const updatedData = req.body.pendingTasks;
-    const options = { new: true };
-
-    const taskresult = await Tasks.findByIdAndUpdate(
-      id,
-
-      { $push: { assignedUser: id } },
-      options
-    );
-
-    res.send(taskresult);
+    //res.send(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
 
-app.delete("/user/:id", async (req, res) => {
+app.delete("/api/user/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    const data = await Users.findAndDelete(id);
+    const data = await Users.findByIdAndDelete(id);
     res.send(`Document with ${data.title} has been deleted..`);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
 
-app.post("/tasks", async (req, res) => {
+app.post("/api/tasks", async (req, res) => {
   try {
     const UTask = new Tasks(req.body);
     const STask = await UTask.save();
@@ -105,12 +130,31 @@ app.post("/tasks", async (req, res) => {
   }
 });
 
-app.get("/tasks", async (req, res) => {
+app.get("/api/tasks", async (req, res) => {
   try {
     const data = await Tasks.find();
     res.json(data);
   } catch (error) {
     console.log("error");
+  }
+});
+
+app.get("/api/task/:id", async (req, res) => {
+  try {
+    const data = await Tasks.findById(req.params.id);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.delete("/api/task/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const data = await Tasks.findByIdAndDelete(id);
+    res.send(`Document with ${data.title} has been deleted..`);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 
