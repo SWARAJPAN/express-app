@@ -29,4 +29,4 @@ For users : https://taskmanagerapi99.herokuapp.com/api/users?count=true
 
 You can view the entire project code on my Github: https://github.com/SWARAJPAN/express-app
 
-Tech stack: mongoose, nodemon​, mongodb compass, mongo Atlas, express, node js
+Tech stack: mongoose, nodemon​, mongodb compass, mongo Atlas, express, node js, Heroku
