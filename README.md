@@ -1,5 +1,3 @@
-Assignment 3: completed
-
 API for a task management / todo list.
 
 I have published this on Heroku 
