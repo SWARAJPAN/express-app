@@ -20,18 +20,37 @@ mongoose
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+// console.log(bodyParser);
 
 // app.use(express.json());
 
 app.post("/api/users", async (req, res) => {
-  try {
-    const Upeople = new Users(req.body);
-    const Speople = await Upeople.save();
-    res.send(Speople);
-    console.log(Speople);
-  } catch (error) {
-    console.log(error);
+  if (!req.body.email == "" && !req.body.name == "") {
+    const findEmail = await Users.find({ email: req.body.email });
+    console.log(findEmail);
+    if (findEmail.length == 0) {
+      try {
+        const Upeople = new Users(req.body);
+        const data = await Upeople.save();
+        res.status(201).json({ message: "ok", data });
+      } catch (error) {
+        res.status(500).json({ message: "Server Error" });
+      }
+    } else {
+      res.status(500).json({ message: "Email already exists" });
+    }
+  } else {
+    res.status(500).json({ message: "Please enter email and name" });
   }
+
+  // try {
+  //   const Upeople = new Users(req.body);
+  //   const Speople = await Upeople.save();
+  //   res.send(Speople);
+  //   console.log(Speople);
+  // } catch (error) {
+  //   console.log(error);
+  // }
 });
 
 app.get("/api/users", (req, res) => {
@@ -42,25 +61,58 @@ app.get("/api/users", (req, res) => {
   //   console.log("error");
   // }
 
-  Users.find(eval("(" + req.query.where + ")"))
-    .select(eval("(" + req.query.select + ")"))
-    .sort(eval("(" + req.query.sort + " )"))
-    // .skip(eval("(" + req.query.skip + " )"))
-    // .limit(eval("(" + req.query.limit + " )"))
-    // .sort(eval(req.query.sort))
-    // .populate('tasks')
-    .exec((error, data) => {
-      if (error) {
-        res.send(error);
-      } else {
-        res.json({ message: "success", data });
-      }
-    });
+  // if (req.query.count == "") {
+  //   Users.find(eval("(" + req.query.where + ")"))
+  //     // .count(eval("(" + req.query.count + " )"))
+  //     .select(eval("(" + req.query.select + ")"))
+  //     .sort(eval("(" + req.query.sort + " )"))
+
+  //     .exec((error, data) => {
+  //       if (error) {
+  //         res.status(200).send(error);
+  //       } else {
+  //         res.json({ message: "success", data });
+  //       }
+  //     });
+  // }
+  if (req.query.count == "true") {
+    console.log(req.query.count);
+    Users.find(eval("(" + req.query.where + ")"))
+      .skip(eval("(" + req.query.skip + " )"))
+      .limit(eval("(" + req.query.limit + " )"))
+      .select(eval("(" + req.query.select + ")"))
+      .sort(eval("(" + req.query.sort + " )"))
+      .count()
+      // .count(eval("(" + req.query.count + " )"))
+
+      .exec((error, data) => {
+        if (error) {
+          res.status(400).send(error);
+        } else {
+          res.status(200).json({ message: "Success", data });
+        }
+      });
+  } else {
+    Users.find(eval("(" + req.query.where + ")"))
+      .select(eval("(" + req.query.select + ")"))
+      .sort(eval("(" + req.query.sort + " )"))
+      .skip(eval("(" + req.query.skip + " )"))
+      .limit(eval("(" + req.query.limit + " )"))
+
+      .exec((error, data) => {
+        if (error) {
+          res.status(400).send(error);
+        } else {
+          res.status(200).json({ message: "success", data });
+        }
+      });
+    // res.status(400).send("Error");
+  }
 });
 app.get("/api/users/:id", async (req, res) => {
   try {
     const data = await Users.findById(req.params.id);
-    res.json(data);
+    res.status(200).json(data);
   } catch (error) {
     res.status(500).json({ message: "error.message" });
   }
@@ -80,7 +132,7 @@ app.put("/api/users/:id", async (req, res) => {
 
     console.log(availablePendingTasks.length);
     if (availablePendingTasks.length > 0) {
-      res.send("The task is already assigned to this user");
+      res.status(201).send("The task is already assigned to this user");
     } else {
       const result = await Users.findByIdAndUpdate(
         id,
@@ -102,7 +154,7 @@ app.put("/api/users/:id", async (req, res) => {
           res.json(updatedTask);
           console.log(updatedTask);
         } else if (!findTask.completed) {
-          res.json("This task is already assigned to another.");
+          res.status(200).json("This task is already assigned to another.");
         }
 
         // res.send(taskresult);
@@ -113,7 +165,7 @@ app.put("/api/users/:id", async (req, res) => {
 
     //res.send(result);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(404).json({ message: error.message });
   }
 });
 
@@ -121,20 +173,37 @@ app.delete("/api/users/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const data = await Users.findByIdAndDelete(id);
-    res.json(`Document with ${data.title} has been deleted..`);
+    res.status(200).json(`Document with ${data.title} has been deleted..`);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(404).json({ message: error.message });
   }
 });
 
 app.post("/api/tasks", async (req, res) => {
-  try {
-    const UTask = new Tasks(req.body);
-    const STask = await UTask.save();
-    res.json(STask);
-    console.log(res.body);
-  } catch (error) {
-    console.log(error);
+  // try {
+  //   const UTask = new Tasks(req.body);
+  //   const STask = await UTask.save();
+  //   res.status(201).json(STask);
+  //   console.log(res.body);
+  // } catch (error) {
+  //   res.status(400).json({ message: error.message });
+  //   console.log(error);
+  // }
+  if (!req.body.deadline == "" && !req.body.name == "") {
+    const findDeadline = await Users.find({ deadline: req.body.deadline });
+    console.log(findDeadline);
+    res.status(201).json({ message: "ok", findDeadline });
+    if (findDeadline.length == 0) {
+      try {
+        const UTask = new Tasks(req.body);
+        const data = await UTask.save();
+        res.status(201).json({ message: "ok", data });
+      } catch (error) {
+        res.status(500).json({ message: "Server Error" });
+      }
+    }
+  } else {
+    res.status(500).json({ message: "Please enter name and deadline" });
   }
 });
 
@@ -145,26 +214,44 @@ app.get("/api/tasks", async (req, res) => {
   // } catch (error) {
   //   console.log("error");
   // }
-  Tasks.find(eval("(" + req.query.where + ")"))
-    .skip(eval("(" + req.query.skip + " )"))
-    .limit(eval("(" + req.query.limit + " )"))
-    // .select(eval("(" + req.query.select + ")"))
-    // .sort(eval("(" + req.query.sort + " )"))
-    .exec((error, data) => {
-      if (error) {
-        res.send(error);
-      } else {
-        res.json({ message: "success", data });
-      }
-    });
+  if (req.query.count == "true") {
+    Tasks.find(eval("(" + req.query.where + ")"))
+      .skip(eval("(" + req.query.skip + " )"))
+      .limit(eval("(" + req.query.limit + " )"))
+      .select(eval("(" + req.query.select + ")"))
+      .sort(eval("(" + req.query.sort + " )"))
+      .count()
+
+      .exec((error, data) => {
+        if (error) {
+          res.status(404).send(error);
+        } else {
+          res.status(200).json({ message: "success", data });
+        }
+      });
+  } else {
+    Tasks.find(eval("(" + req.query.where + ")"))
+      .select(eval("(" + req.query.select + ")"))
+      .skip(eval("(" + req.query.skip + " )"))
+      .limit(eval("(" + req.query.limit + " )"))
+      // .sort(eval("(" + req.query.sort + " )"))
+
+      .exec((error, data) => {
+        if (error) {
+          res.status(404).send(error);
+        } else {
+          res.status(200).json({ message: "success", data });
+        }
+      });
+  }
 });
 
 app.get("/api/tasks/:id", async (req, res) => {
   try {
     const data = await Tasks.findById(req.params.id);
-    res.json(data);
+    res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(404).json({ message: error.message });
   }
 });
 
@@ -172,9 +259,9 @@ app.delete("/api/tasks/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const data = await Tasks.findByIdAndDelete(id);
-    res.send(`Document with ${data.title} has been deleted..`);
+    res.status(200).send(`Document with ${data.title} has been deleted..`);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(404).json({ message: error.message });
   }
 });
 
